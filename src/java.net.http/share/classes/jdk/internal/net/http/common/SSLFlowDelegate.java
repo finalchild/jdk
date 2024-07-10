@@ -305,6 +305,11 @@ public class SSLFlowDelegate {
             return "SSL Reader(" + tubeName + ")";
         }
 
+        @Override
+        public boolean closing() {
+            return closeNotifyReceived();
+        }
+
         /**
          * entry point for buffers delivered from upstream Subscriber
          */
@@ -1182,13 +1187,13 @@ public class SSLFlowDelegate {
         return false;
     }
 
-    // FIXME: acknowledge a received CLOSE request from peer
     EngineResult doClosure(EngineResult r) throws IOException {
         if (debug.on())
             debug.log("doClosure(%s): %s [isOutboundDone: %s, isInboundDone: %s]",
                       r.result, engine.getHandshakeStatus(),
                       engine.isOutboundDone(), engine.isInboundDone());
-        if (engine.getHandshakeStatus() == HandshakeStatus.NEED_WRAP) {
+        var handshakeStatus = engine.getHandshakeStatus();
+        if (handshakeStatus == HandshakeStatus.NEED_WRAP) {
             // we have received TLS close_notify and need to send
             // an acknowledgement back. We're calling doHandshake
             // to finish the close handshake.
@@ -1210,6 +1215,16 @@ public class SSLFlowDelegate {
                         readerLock.unlock();
                     }
                 }
+            }
+        } else if (handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
+            if (debug.on()) debug.log("doClosure: close_notify received");
+            close_notify_received = true;
+            var readerLock = reader.readBufferLock;
+            readerLock.lock();
+            try {
+                reader.completing = true;
+            } finally {
+                readerLock.unlock();
             }
         }
         return r;

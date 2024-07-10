@@ -162,7 +162,7 @@ abstract class HttpConnection implements Closeable {
      */
     abstract InetSocketAddress proxy();
 
-    /** Tells whether, or not, this connection is open. */
+    /** Tells whether, or not, this connection is available to use in a new request.. */
     final boolean isOpen() {
         return channel().isOpen() &&
                 (connected() ? !getConnectionFlow().isFinished() : true);

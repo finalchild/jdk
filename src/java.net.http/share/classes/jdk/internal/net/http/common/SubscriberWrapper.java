@@ -459,6 +459,13 @@ public abstract class SubscriberWrapper
     }
 
     void checkCompletion() {
+        if (completionAcknowledged) {
+            if (debug.on()) debug.log("calling downstreamSubscriber.onComplete()");
+            downstreamSubscriber.onComplete();
+            // Fix me subscriber.onComplete.run();
+            downstreamCompleted = true;
+            cf.complete(null);
+        }
         if (downstreamCompleted || !upstreamCompleted) {
             return;
         }
@@ -467,14 +474,6 @@ public abstract class SubscriberWrapper
         }
         if (errorRef.get() != null) {
             pushScheduler.runOrSchedule();
-            return;
-        }
-        if (completionAcknowledged) {
-            if (debug.on()) debug.log("calling downstreamSubscriber.onComplete()");
-            downstreamSubscriber.onComplete();
-            // Fix me subscriber.onComplete.run();
-            downstreamCompleted = true;
-            cf.complete(null);
         }
     }
 
